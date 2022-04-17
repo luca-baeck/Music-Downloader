@@ -6,6 +6,8 @@ from pytube import Playlist
 from pytube.cli import on_progress
 import os.path
 import requests
+import yt_dlp
+from mutagen.mp3 import MP3
 
 
 clientId = "301eba20552b498aac63fd5d7401bc91"
@@ -53,6 +55,8 @@ def makeOutput(name, output_path):
 
 def getSongs(link, output_path):
     songs = []
+    pName = ''
+    playlist = False
     if('open.spotify.com' in link):
 
         if('/track/' in link):
@@ -67,6 +71,7 @@ def getSongs(link, output_path):
             search = song['name'] + " " + song['artists'][0]['name']
             songs.append(search)
             output_path = makeOutput(search , output_path)
+            pName = song['name']
 
 
         elif('/playlist/' in link):
@@ -81,8 +86,8 @@ def getSongs(link, output_path):
             print('Playlist name: ' + playlist['name'])
             print('')
             output_path = makeOutput(playlist['name'] , output_path)
-
-
+            pName = playlist['name']
+            playlist = True
             for track in results:
                 song = track['track']
                 print('')
@@ -105,7 +110,8 @@ def getSongs(link, output_path):
             print('Album name: ' + album['name'])
             print('')
             output_path = makeOutput(album['name'] , output_path)
-
+            pName = album['name']
+            playlist = True
             for track in results:
                 song = track
                 print('')
@@ -128,6 +134,7 @@ def getSongs(link, output_path):
             search = yt.title
             songs.append(search)
             output_path = makeOutput(search, output_path)
+            pName = search
 
         elif('/playlist?' in link):
             play_list = Playlist(link)
@@ -135,7 +142,8 @@ def getSongs(link, output_path):
             print('Playlist name: ' + play_list.title)
             print('')
             output_path = makeOutput(play_list.title , output_path)
-
+            pName = play_list.title
+            playlist = True
             for track in play_list.videos:
                 print('')
                 print(track.title)
@@ -145,9 +153,16 @@ def getSongs(link, output_path):
                 songs.append(search)
 
 
-    return songs , output_path
+    return songs , output_path , pName, playlist
 
-def downloadSongs(links, output_path):
+
+
+
+
+
+
+def downloadSongs(links, output_path, pName, playlist):
+    titles = []
     counter = 0
     for link in links:
         yt = YouTube(link, on_progress_callback=on_progress)
@@ -156,23 +171,57 @@ def downloadSongs(links, output_path):
         print('')
         print('downloading ' + yt.title + ' from ' + yt.author + '(' + str(yt.length) + 's)' + ': ' + link)
         print("Song stats:")
+        print('Duration: ' + str(yt.length) + 's')
         print('Views: ' + str(yt.views))
-        print("Rating: " + str(yt.rating))
-        print("From: " + str(yt.publish_date))
-        print('')
+        date = str(yt.publish_date)
+        if(' 00:00:00' in date):
+            date = date.replace(' 00:00:00', '')
+        print("From: " + date)
+
 
         # Download mp3
-        audio_file = yt.streams.filter(only_audio=True).first().download(output_path)
-        base, ext = os.path.splitext(audio_file)
-        new_file = base + '.mp3'
-        os.rename(audio_file, new_file)
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': output_path + '/%(title)s.%(ext)s',
+            'writethumbnail': True,
+            "quiet": True,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            },
+            {'key': 'EmbedThumbnail'},
+            {'key': 'FFmpegMetadata'}
+            ],
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            meta = ydl.extract_info(link, download=True)
+        titles.append(meta['title'] + '.mp3')
+
         counter = counter + 1
         print('')
         print('')
         print('')
     print('downloaded ' + str(counter) + ' Songs from ' + str(len(links)) + ' Songs')
     print('')
-    print('')
+    if(playlist):
+        print('Creating m3u file...')
+        print('')
+        file = pName + '.m3u'
+        path = os.path.join(output_path, file)
+        with open(path, 'w') as f:
+            f.write('#EXTM3U')
+            f.write('\n')
+            for title in titles:
+                audio = MP3(os.path.join(output_path, title))
+                length = audio.info.length
+                line1 = '#EXTINF:' + str(length) + ',' + title.replace('.mp3', '')
+                f.write(line1)
+                f.write('\n')
+                f.write(title)
+                f.write('\n')
+
+
 
 print('')
 print('***************************************************')
@@ -186,15 +235,20 @@ def run():
 
     while( os.path.isdir(output_path) is False):
         output_path = input('Enter a path where you want your songs to be saved... ')
-
+    print("Getting tracks...")
     x = getSongs(link, output_path)
     songs = x[0]
     if not(songs):
         return
     output_path = x[1]
+    pName = x[2]
+    playlist = x[3]
+    print('Getting matching youtube links...')
     links = getLinks(songs)
-    downloadSongs(links, output_path)
+    print('Downloading ' + str(len(links)) + ' tracks')
+    downloadSongs(links, output_path, pName, playlist)
     print('Downloaded all songs')
+    print('')
     print('')
 
 
