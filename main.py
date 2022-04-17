@@ -8,6 +8,17 @@ import os.path
 import requests
 import yt_dlp
 from mutagen.mp3 import MP3
+import lyricsgenius as lg
+from youtube_title_parse import get_artist_title
+from mutagen.mp3 import MP3
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import USLT
+from mutagen.id3 import ID3
+from mutagen.id3 import ID3, TIT2, TALB, TPE1, TPE2, COMM, USLT, TCOM, TCON, TDRC
+
+
+api_key = "IBD-SvesRNwM-O8Wpheor9zwkVED6WPzyn1KmDTGvdRkwM7LdaDzMKySv07tkPDqGyfzu7XQogsJQcYe61GkjA"
+genius = lg.Genius(api_key)
 
 
 clientId = "301eba20552b498aac63fd5d7401bc91"
@@ -158,8 +169,36 @@ def getSongs(link, output_path):
 
 
 
+def writeTags(file, yt_title):
+    artist, title = get_artist_title(yt_title)
+
+    if('ft.' in title):
+        title = title.replace(title[title.find('ft.'):] , '')
+    if ('prod.' in title):
+        title = title.replace(title[title.find('prod.'):], '')
+    if('(Audio)' in title):
+        title = title.replace('(Audio)' , '')
+    if('(' in title):
+        title = title.replace('(' , '')
+    if (')' in title):
+        title = title.replace(')', '')
 
 
+    song = genius.search_song(title, artist, get_full_info=True)
+
+    lyrics = str(song.lyrics)
+
+    tags = ID3(file)
+    ulyrics = (USLT(encoding=3, lang=u'eng', desc=u'desc', text=''))
+    # change the lyrics text
+    ulyrics.text = lyrics
+    tags.setall('USLT', [ulyrics])
+    # title
+    tags["TIT2"] = TIT2(encoding=3, text=song.title)
+    tags["COMM"] = COMM(encoding=3, lang=u'eng', desc='desc', text=u'Song downloaded with musicdownloader by Luca Bäck')
+    # artist
+    tags["TPE1"] = TPE1(encoding=3, text=song.artist)
+    tags.save(file)
 
 def downloadSongs(links, output_path, pName, playlist):
     titles = []
@@ -185,6 +224,7 @@ def downloadSongs(links, output_path, pName, playlist):
             'outtmpl': output_path + '/%(title)s.%(ext)s',
             'writethumbnail': True,
             "quiet": True,
+            'addmetadata': True,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -197,7 +237,10 @@ def downloadSongs(links, output_path, pName, playlist):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             meta = ydl.extract_info(link, download=True)
         titles.append(meta['title'] + '.mp3')
-
+        print('')
+        print('Writing Tags...')
+        file = os.path.join(output_path, meta['title'] + '.mp3')
+        writeTags(file, meta['title'])
         counter = counter + 1
         print('')
         print('')
