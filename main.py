@@ -6,6 +6,7 @@ from pytube import Playlist
 from pytube.cli import on_progress
 import os.path
 import requests
+import re
 import yt_dlp
 from mutagen.mp3 import MP3
 import lyricsgenius as lg
@@ -51,6 +52,7 @@ def getLinks(songs):
 
 def makeOutput(name, output_path):
     counter = 1
+    name = re.sub('[^A-Za-z0-9]+', '', name)
     x = name + ' ' + str(counter)
     x = str(x)
 
@@ -170,8 +172,11 @@ def getSongs(link, output_path):
 
 
 def writeTags(file, yt_title):
-    artist, title = get_artist_title(yt_title)
-
+    try:
+        artist, title = get_artist_title(yt_title)
+    except:
+        title = yt_title
+        artist = None
     if('ft.' in title):
         title = title.replace(title[title.find('ft.'):] , '')
     if ('prod.' in title):
@@ -183,9 +188,25 @@ def writeTags(file, yt_title):
     if (')' in title):
         title = title.replace(')', '')
 
+    if not(artist):
+        try:
+            song = genius.search_song(title, get_full_info=True)
+        except:
+            song = None
+            print('')
+            print('Api request failed')
+            print('')
 
-    song = genius.search_song(title, artist, get_full_info=True)
-
+    else:
+        try:
+            song = genius.search_song(title, artist, get_full_info=True)
+        except:
+            song = None
+            print('')
+            print('Api request failed')
+            print('')
+    if not song:
+        return
     lyrics = str(song.lyrics)
 
     tags = ID3(file)
@@ -236,10 +257,14 @@ def downloadSongs(links, output_path, pName, playlist):
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             meta = ydl.extract_info(link, download=True)
-        titles.append(meta['title'] + '.mp3')
+        filename = ydl.prepare_filename(meta)
+        filename = filename.replace('.webm','.mp3')
+        titles.append(filename)
+        print('')
         print('')
         print('Writing Tags...')
-        file = os.path.join(output_path, meta['title'] + '.mp3')
+        print('')
+        file = os.path.join(output_path, filename)
         writeTags(file, meta['title'])
         counter = counter + 1
         print('')
@@ -252,7 +277,7 @@ def downloadSongs(links, output_path, pName, playlist):
         print('')
         file = pName + '.m3u'
         path = os.path.join(output_path, file)
-        with open(path, 'w') as f:
+        with open(path, 'w',encoding="utf-8") as f:
             f.write('#EXTM3U')
             f.write('\n')
             for title in titles:
@@ -288,7 +313,7 @@ def run():
     playlist = x[3]
     print('Getting matching youtube links...')
     links = getLinks(songs)
-    print('Downloading ' + str(len(links)) + ' tracks')
+    print('Downloading ' + str(len(links)) + ' track(s)')
     downloadSongs(links, output_path, pName, playlist)
     print('Downloaded all songs')
     print('')
