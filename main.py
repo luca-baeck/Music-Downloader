@@ -18,12 +18,12 @@ from mutagen.id3 import ID3
 from mutagen.id3 import ID3, TIT2, TALB, TPE1, TPE2, COMM, USLT, TCOM, TCON, TDRC
 
 
-api_key = "IBD-SvesRNwM-O8Wpheor9zwkVED6WPzyn1KmDTGvdRkwM7LdaDzMKySv07tkPDqGyfzu7XQogsJQcYe61GkjA"
+api_key = "***"
 genius = lg.Genius(api_key)
 
 
-clientId = "301eba20552b498aac63fd5d7401bc91"
-clientSecret = "08bc13b7b3ea450a9203ee03ce6c4cc6"
+clientId = "***"
+clientSecret = "***"
 
 AUTH_URL = 'https://accounts.spotify.com/api/token'
 auth_response = requests.post(AUTH_URL, {
