@@ -10,6 +10,23 @@ Lyrics der Songs werden in den Metadaten der MP3-Dateien gespeichert.</p>
 - [Bugs](https://github.com/luca-baeck/Music-Downloader/issues "Issues Page")
 
 
+## Screenshots
+
+![Screenshot](/application-preview/preview.png "Screenshot")
+![Screenshot](/application-preview/start.png "Screenshot")
+![Screenshot](/application-preview/link.png "Screenshot")
+![Screenshot](/application-preview/location.png "Screenshot")
+![Screenshot](/application-preview/getSongs.png "Screenshot")
+![Screenshot](/application-preview/download1.png "Screenshot")
+![Screenshot](/application-preview/download2.png "Screenshot")
+![Screenshot](/application-preview/download3.png "Screenshot")
+![Screenshot](/application-preview/output.png "Screenshot")
+
+
+Application Video:
+[Video](/application-preview/preview.ts "Video")
+
+
 ## Sprachen
 
 - Python
